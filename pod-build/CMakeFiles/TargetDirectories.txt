@@ -1,0 +1,4 @@
+/Users/rchambers/Documents/16456/apriltags/pod-build/example/CMakeFiles/imu.dir
+/Users/rchambers/Documents/16456/apriltags/pod-build/example/CMakeFiles/apriltags_demo.dir
+/Users/rchambers/Documents/16456/apriltags/pod-build/CMakeFiles/apriltags.dir
+/Users/rchambers/Documents/16456/apriltags/pod-build/CMakeFiles/tmp.dir
