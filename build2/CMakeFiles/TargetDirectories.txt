@@ -1,0 +1,4 @@
+/Users/rchambers/Documents/16456/apriltags/build2/example/CMakeFiles/imu.dir
+/Users/rchambers/Documents/16456/apriltags/build2/example/CMakeFiles/apriltags_demo.dir
+/Users/rchambers/Documents/16456/apriltags/build2/CMakeFiles/apriltags.dir
+/Users/rchambers/Documents/16456/apriltags/build2/CMakeFiles/tmp.dir

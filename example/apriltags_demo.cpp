@@ -147,6 +147,10 @@ class Demo {
   double m_fy;
   double m_px; // camera principal point
   double m_py;
+//  double cameraMat [9];
+    
+    
+
 
   int m_deviceId; // camera id (in case of multiple cameras)
 
@@ -172,14 +176,17 @@ public:
     m_arduino(false),
     m_timing(false),
 
-    m_width(640),
-    m_height(480),
+    //1280
+    //960
+    //640
+    //480
+    m_width(1280),
+    m_height(960),
     m_tagSize(0.166),
-    m_fx(600),
-    m_fy(600),
+    m_fx(704),
+    m_fy(704),
     m_px(m_width/2),
     m_py(m_height/2),
-
     m_exposure(-1),
     m_gain(-1),
     m_brightness(-1),
@@ -302,6 +309,7 @@ public:
 
   void setupVideo() {
 
+    cout << "h" <<endl;
 #ifdef EXPOSURE_CONTROL
     // manually setting camera exposure settings; OpenCV/v4l1 doesn't
     // support exposure control; so here we manually use v4l2 before
@@ -338,6 +346,7 @@ public:
     // find and open a USB camera (built in laptop camera, web cam etc)
     m_cap = cv::VideoCapture(m_deviceId);
         if(!m_cap.isOpened()) {
+            cout << "Failed" << endl;
       cerr << "ERROR: Can't find video device " << m_deviceId << "\n";
       exit(1);
     }
@@ -354,8 +363,8 @@ public:
         string objects = "[";
     for (int i=0; i<detections.size(); i++) {
         AprilTags::TagDetection detection = detections[i];
-    cout << "  Id: " << detection.id
-         << " (Hamming: " << detection.hammingDistance << ")";
+//    cout << "  Id: " << detection.id
+//         << " (Hamming: " << detection.hammingDistance << ")";
 
     // recovering the relative pose of a tag:
 
@@ -394,18 +403,20 @@ public:
     double yaw, pitch, roll;
     wRo_to_euler(fixed_rot, yaw, pitch, roll);
 
-    cout << "stance=" << translation.norm()
-         << "m, x=" << translation(0)
-         << ", y=" << translation(1)
-         << ", z=" << translation(2)
-         << ", yaw=" << yaw
-         << ", pitch=" << pitch
-         << ", roll=" << roll
-         << ", thing="<<matrix
-        << ", other: "<<matrix2
-         <<", list= "<<matArray
-         << endl;
-            
+//    cout << "stance=" << translation.norm()
+//         << "m, x=" << translation(0)
+//         << ", y=" << translation(1)
+//         << ", z=" << translation(2)
+//         << ", yaw=" << yaw
+//         << ", pitch=" << pitch
+//         << ", roll=" << roll
+////         << ", thing="<<matrix
+////        << ", other: "<<matrix2
+////         <<", list= "<<matArray
+//         << endl;
+        
+        cout << "Matrix= "<<matArray <<endl;
+        
       
         
         string obj = "{\"id\": " + std::to_string(detection.id) +", \"transform\": " + matArray+ "}";
@@ -417,8 +428,8 @@ public:
     }
         objects = objects + "]";
         wss->poll();
-        cout <<"objs = " <<objects <<endl;
-        wss->send("[\"broadcast\", \"blah\", "+ objects+"]");
+//        cout <<"objs = " <<objects <<endl;
+        wss->send("[\"broadcast\", \"apriltags\", "+ objects+"]");
 
     // Also note that for SLAM/multi-view application it is better to
     // use reprojection error of corner points, because the noise in
@@ -447,16 +458,18 @@ public:
 
     // print out each detection
     cout << detections.size() << " tags detected:" << endl;
+    
     //for (int i=0; i<detections.size(); i++) {
     print_detection(detections,wss);
     //}
 
     // show the current image including any detections
     if (m_draw) {
-      for (int i=0; i<detections.size(); i++) {
+              for (int i=0; i<detections.size(); i++) {
         // also highlight in the image
         detections[i].draw(image);
       }
+        cout << "here"<<endl;
       imshow(windowName, image); // OpenCV call
     }
 
@@ -506,6 +519,7 @@ public:
 
     cv::Mat image;
     cv::Mat image_gray;
+    cv::Mat dstImage;
 
     int frame = 0;
     double last_t = tic();
@@ -513,8 +527,22 @@ public:
 
       // capture frame
       m_cap >> image;
+        float cameraMatVals [9] = {9.0944439377935953e+02,0,4.7950000000000000e+02,0,9.0944439377935953e+02,6.3950000000000000e+02,0,0,1};//{704,0,639,0,704,479,0,0,1};
+        float distortCoVals [9] = {-3.8985014410571467e-01, 1.4696778052841014e-01, 0, 0,
+            -3.8077021574260281e-02};//{ -3.8562190492591747e-01, -5.8597013061168490e-03, 0, 0, 6.3486357123205861e-01};
+//        std::vector<double> cameraMat (cameraMatVals, cameraMatVals + sizeof(cameraMatVals) / sizeof(double) );
+//        std::vector<double> distortCo (distortCoVals, distortCoVals + sizeof(distortCoVals) / sizeof(double) );
+        std::vector<double> output1;
+        std::vector<double> output2;
+        cv::Mat rmap[1][2];
+        cv::Mat1f r(3, 3);  // rows, cols are int
+        cv::Mat cameraMat = cv::Mat(3,3,CV_32FC1,cameraMatVals);
+        cv::Mat distortCo = cv::Mat(1,4,CV_32FC1, distortCoVals);
+        undistort(image,dstImage,cameraMat,distortCo);
+        //initUndistortRectifyMap(cameraMat,distortCo, r, cameraMat, image.size(),CV_32FC1,rmap[0][0],rmap[0][1]);
+        //remap(image,dstImage, rmap[0][0],rmap[0][1],cv::INTER_NEAREST);
 
-      processImage(image, image_gray, &*wss);
+      processImage(dstImage, image_gray, &*wss);
 
       // print out the frame rate at which image frames are being processed
       frame++;
@@ -543,10 +571,12 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<WebSocket> wss(WebSocket::from_url("ws://localhost:8080"));
 //    WebSocket::pointer wss = WebSocket::from_url("ws://localhost:8080");
     if (demo.isVideo()) {
+    
     cout << "Processing video" << endl;
 
     // setup image source, window for drawing, serial port...
     demo.setupVideo();
+    
 
     // the actual processing loop where tags are detected and visualized
     demo.loop(&*wss);
